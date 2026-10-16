@@ -15,10 +15,10 @@
 }
 
 .main-sidebar-header {
-    min-height: 56px;
-    padding: 10px 12px;
+    min-height: 72px;
+    padding: 12px 16px;
     border-bottom: 1px solid rgba(125, 178, 255, 0.18);
-    background: rgba(3, 26, 61, 0.42);
+    background: rgba(3, 26, 61, 0.55);
     display: flex;
     align-items: center;
 }
@@ -26,10 +26,11 @@
 .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
     min-width: 0;
     color: #ffffff;
+    text-decoration: none;
 }
 
 .sidebar-brand:hover {
@@ -37,21 +38,37 @@
 }
 
 .sidebar-brand-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%);
-    color: var(--el-primary);
-    border: 1px solid rgba(255, 255, 255, 0.62);
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.20);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 12px rgba(59, 130, 246, 0.25);
     flex-shrink: 0;
+    overflow: hidden;
+    padding: 2px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-brand:hover .sidebar-brand-icon {
+    transform: scale(1.04);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(59, 130, 246, 0.4);
+}
+
+.sidebar-brand-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: inherit;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
 }
 
 .sidebar-brand-icon i {
-    font-size: 17px;
+    font-size: 20px;
 }
 
 .sidebar-brand-text {
@@ -61,11 +78,11 @@
 }
 
 .sidebar-brand-name {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 800;
-    letter-spacing: 0;
+    letter-spacing: 0.8px;
     color: #ffffff;
-    line-height: 1.15;
+    line-height: 1.2;
 }
 
 .sidebar-brand-subtitle {
@@ -78,10 +95,10 @@
 }
 
 .main-sidebar {
-    height: calc(100vh - 56px);
+    height: calc(100vh - 60px);
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px 8px 16px;
+    padding: 10px 10px 18px;
     scrollbar-width: thin;
     scrollbar-color: rgba(125, 178, 255, 0.72) rgba(255, 255, 255, 0.08);
 }
@@ -113,12 +130,12 @@
 }
 
 .main-menu-title {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     color: #7db2ff;
-    text-transform: none;
-    letter-spacing: 0;
-    padding: 12px 10px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 10px 6px;
     margin-top: 6px;
     border-top: 1px solid rgba(125, 178, 255, 0.17);
 }
@@ -137,10 +154,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 36px;
-    padding: 8px 10px;
+    min-height: 38px;
+    padding: 7px 10px;
     border: 1px solid transparent;
-    border-radius: 8px;
+    border-radius: 9px;
     color: #d7e7ff;
     text-decoration: none;
     cursor: pointer;
@@ -162,13 +179,13 @@
     align-items: center;
     justify-content: center;
     color: #a9c7f7;
-    font-size: 15px;
+    font-size: 15.5px;
     flex-shrink: 0;
 }
 
 .side-menu__label {
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 600;
     color: inherit;
     flex: 1;
     white-space: nowrap;
@@ -1934,40 +1951,40 @@ div.dt-processing {
     }
 
     .accounts-summary-row .summary-card {
-        min-height: 95px;
-        padding: 16px 18px;
+        min-height: 98px;
+        padding: 18px 20px;
         border-radius: 14px;
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 15px;
     }
 
     .accounts-summary-row .summary-icon {
-        width: 38px;
-        height: 38px;
-        min-width: 38px;
-        border-radius: 10px;
-        font-size: 18px;
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 12px;
+        font-size: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
     .accounts-summary-row .summary-label {
-        font-size: 12px;
+        font-size: 12.5px;
         font-weight: 700;
         margin-bottom: 4px;
     }
 
     .accounts-summary-row .summary-value {
-        font-size: 22px;
-        line-height: 26px;
+        font-size: 24px;
+        line-height: 28px;
         font-weight: 800;
         margin-bottom: 4px;
     }
 
     .accounts-summary-row .summary-sub {
-        font-size: 11px;
+        font-size: 11.5px;
         line-height: 14px;
     }
 

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -13,51 +12,47 @@ class AccountsController extends Controller
 {
     public function index(Request $request)
     {
-        $account_type = Schema::hasTable('account_type')
-            ? DB::table('account_type')->select('id', 'account_type')->orderBy('id')->get()
-            : collect();
+        $account_type = DB::table('account_type')
+            ->select('id', 'account_type')
+            ->orderBy('id', 'asc')
+            ->get();
 
-        $accountsCount = Schema::hasTable('accounts')
-            ? $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')->count()
-            : 0;
+        $accountsCount = DB::table('accounts')->count();
 
-        $totalAccountsBalance = Schema::hasTable('accounts')
-            ? $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')->sum('balance')
-            : 0;
+        $totalAccountsBalance = (float) (DB::table('accounts')->sum('balance') ?? 0);
+
+        $distinctBanksCount = DB::table('accounts')
+            ->whereNotNull('bank_name')
+            ->where('bank_name', '<>', '')
+            ->distinct()
+            ->count('bank_name');
+
+        $avgAccountBalance = $accountsCount > 0 ? round($totalAccountsBalance / $accountsCount, 2) : 0;
 
         return view('contents.accounts.index', compact(
             'account_type',
             'accountsCount',
-            'totalAccountsBalance'
+            'totalAccountsBalance',
+            'distinctBanksCount',
+            'avgAccountBalance'
         ));
     }
 
     public function add(Request $request)
     {
-        $account_type = Schema::hasTable('account_type')
-            ? DB::table('account_type')->select('id', 'account_type')->orderBy('id')->get()
-            : collect();
+        $account_type = DB::table('account_type')
+            ->select('id', 'account_type')
+            ->orderBy('id', 'asc')
+            ->get();
 
         return view('contents.accounts.add', compact('account_type'));
     }
 
     public function listTable(Request $request)
     {
-        if (!Schema::hasTable('accounts')) {
-            return response()->json([
-                'draw' => intval($request->draw),
-                'recordsTotal' => 0,
-                'recordsFiltered' => 0,
-                'data' => [],
-            ]);
-        }
-
-        if (Schema::hasTable('account_type')) {
-            $query = $this->scopeCreatedByCurrentUser(
-                DB::table('accounts as a')->leftJoin('account_type as act', 'a.account_type_id', '=', 'act.id'),
-                'accounts',
-                'a.created_by'
-            )->select(
+        $query = DB::table('accounts as a')
+            ->leftJoin('account_type as act', 'a.account_type_id', '=', 'act.id')
+            ->select(
                 'a.id',
                 'a.account_number',
                 'a.account_type_id',
@@ -69,21 +64,6 @@ class AccountsController extends Controller
                 DB::raw("TO_CHAR(a.created_at, 'DD-MM-YYYY HH24:MI') as created_at"),
                 DB::raw("TO_CHAR(a.updated_at, 'DD-MM-YYYY HH24:MI') as updated_at")
             );
-        } else {
-            $query = $this->scopeCreatedByCurrentUser(DB::table('accounts as a'), 'accounts', 'a.created_by')
-                ->select(
-                    'a.id',
-                    'a.account_number',
-                    'a.account_type_id',
-                    'a.bank_name',
-                    'a.branch',
-                    'a.ifsc_code',
-                    'a.balance',
-                    DB::raw("CAST(a.account_type_id AS TEXT) as account_type"),
-                    DB::raw("TO_CHAR(a.created_at, 'DD-MM-YYYY HH24:MI') as created_at"),
-                    DB::raw("TO_CHAR(a.updated_at, 'DD-MM-YYYY HH24:MI') as updated_at")
-                );
-        }
 
         if (!empty($request->search['value'])) {
             $search = strtolower($request->search['value']);
@@ -94,21 +74,40 @@ class AccountsController extends Controller
                     ->orWhereRaw('LOWER(a.branch) LIKE ?', ["%{$search}%"])
                     ->orWhereRaw('LOWER(a.ifsc_code) LIKE ?', ["%{$search}%"])
                     ->orWhereRaw('CAST(a.balance AS TEXT) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(act.account_type) LIKE ?', ["%{$search}%"])
                     ->orWhereRaw("TO_CHAR(a.created_at, 'DD-MM-YYYY HH24:MI') LIKE ?", ["%{$search}%"])
                     ->orWhereRaw("TO_CHAR(a.updated_at, 'DD-MM-YYYY HH24:MI') LIKE ?", ["%{$search}%"]);
-
-                if (Schema::hasTable('account_type')) {
-                    $q->orWhereRaw('LOWER(act.account_type) LIKE ?', ["%{$search}%"]);
-                } else {
-                    $q->orWhereRaw('CAST(a.account_type_id AS TEXT) LIKE ?', ["%{$search}%"]);
-                }
             });
         }
 
-        $totalRecords = $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')->count();
+        $totalRecords = DB::table('accounts')->count();
         $filteredRecords = (clone $query)->count();
 
-        $query->orderBy('a.id', 'desc');
+        $columns = [
+            'id' => 'a.id',
+            'account_number' => 'a.account_number',
+            'account_type' => 'act.account_type',
+            'bank_name' => 'a.bank_name',
+            'branch' => 'a.branch',
+            'ifsc_code' => 'a.ifsc_code',
+            'balance' => 'a.balance',
+            'created_at' => 'a.created_at',
+            'updated_at' => 'a.updated_at',
+        ];
+
+        if (!empty($request->order)) {
+            $columnIndex = $request->order[0]['column'] ?? 0;
+            $columnName = $request->columns[$columnIndex]['data'] ?? 'id';
+            $direction = strtolower($request->order[0]['dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+
+            if (isset($columns[$columnName])) {
+                $query->orderBy($columns[$columnName], $direction);
+            } else {
+                $query->orderBy('a.id', 'asc');
+            }
+        } else {
+            $query->orderBy('a.id', 'asc');
+        }
 
         $length = (int) $request->length;
         if ($length <= 0) {
@@ -130,43 +129,30 @@ class AccountsController extends Controller
 
     public function edit($id)
     {
-        $record = $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')
-            ->where('id', $id)
-            ->first();
+        $record = DB::table('accounts')->where('id', $id)->first();
 
         if (!$record) {
             abort(404);
         }
 
-        $account_type = Schema::hasTable('account_type')
-            ? DB::table('account_type')->select('id', 'account_type')->orderBy('id')->get()
-            : collect();
+        $account_type = DB::table('account_type')
+            ->select('id', 'account_type')
+            ->orderBy('id', 'asc')
+            ->get();
 
         return view('contents.accounts.edit', compact('record', 'account_type'));
     }
 
     public function view($id)
     {
-        if (Schema::hasTable('account_type')) {
-            $record = $this->scopeCreatedByCurrentUser(
-                DB::table('accounts as a')->leftJoin('account_type as act', 'a.account_type_id', '=', 'act.id'),
-                'accounts',
-                'a.created_by'
-            )->select(
+        $record = DB::table('accounts as a')
+            ->leftJoin('account_type as act', 'a.account_type_id', '=', 'act.id')
+            ->select(
                 'a.*',
                 DB::raw("COALESCE(act.account_type, '-') as account_type")
             )
-                ->where('a.id', $id)
-                ->first();
-        } else {
-            $record = $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')
-                ->where('id', $id)
-                ->first();
-
-            if ($record) {
-                $record->account_type = $record->account_type_id ?? '-';
-            }
-        }
+            ->where('a.id', $id)
+            ->first();
 
         if (!$record) {
             abort(404);
@@ -203,7 +189,7 @@ class AccountsController extends Controller
             'bank_name' => 'required|max:100',
             'branch' => 'required|max:100',
             'ifsc_code' => 'required|max:100',
-            'balance' =>     'numeric','min:0','regex:/^\d+(\.\d{1,2})?$/'
+            'balance' => ['required', 'numeric', 'min:0', 'regex:/^\d+(\.\d{1,2})?$/'],
         ]);
 
         $data = [
@@ -213,20 +199,12 @@ class AccountsController extends Controller
             'branch' => trim($request->branch),
             'ifsc_code' => trim($request->ifsc_code),
             'balance' => $request->balance,
+            'updated_at' => now(),
+            'updated_by' => Auth::id(),
         ];
 
-        if (Schema::hasColumn('accounts', 'updated_at')) {
-            $data['updated_at'] = now();
-        }
-
-        if (Schema::hasColumn('accounts', 'updated_by')) {
-            $data['updated_by'] = Auth::id();
-        }
-
         if ($id) {
-            $record = $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')
-                ->where('id', $id)
-                ->first();
+            $record = DB::table('accounts')->where('id', $id)->first();
 
             if (!$record) {
                 throw ValidationException::withMessages([
@@ -241,13 +219,8 @@ class AccountsController extends Controller
                 'message' => 'Account updated successfully.'
             ]);
         } else {
-            if (Schema::hasColumn('accounts', 'created_at')) {
-                $data['created_at'] = now();
-            }
-
-            if (Schema::hasColumn('accounts', 'created_by')) {
-                $data['created_by'] = Auth::id();
-            }
+            $data['created_at'] = now();
+            $data['created_by'] = Auth::id();
 
             DB::table('accounts')->insert($data);
 
@@ -261,7 +234,7 @@ class AccountsController extends Controller
     public function destroy($id)
     {
         DB::transaction(function () use ($id) {
-            $record = $this->scopeCreatedByCurrentUser(DB::table('accounts'), 'accounts')
+            $record = DB::table('accounts')
                 ->where('id', $id)
                 ->lockForUpdate()
                 ->first();
@@ -272,16 +245,14 @@ class AccountsController extends Controller
                 ]);
             }
 
-            if (Schema::hasTable('transactions')) {
-                $usedInTransactions = $this->scopeCreatedByCurrentUser(DB::table('transactions'), 'transactions')
-                    ->where('account_number_id', $id)
-                    ->exists();
+            $usedInTransactions = DB::table('transactions')
+                ->where('account_number_id', $id)
+                ->exists();
 
-                if ($usedInTransactions) {
-                    throw ValidationException::withMessages([
-                        'account_id' => 'This account is already used in transactions and cannot be deleted.'
-                    ]);
-                }
+            if ($usedInTransactions) {
+                throw ValidationException::withMessages([
+                    'account_id' => 'This account is already used in transactions and cannot be deleted.'
+                ]);
             }
 
             DB::table('accounts')->where('id', $id)->delete();

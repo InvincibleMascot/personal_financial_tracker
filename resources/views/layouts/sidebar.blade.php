@@ -39,7 +39,7 @@
     <div class="main-sidebar-header">
         <a href="{{ $routeUrl($homeRoute, url('/dashboard')) }}" class="sidebar-brand">
             <span class="sidebar-brand-icon">
-                <i class="bi bi-journal-text"></i>
+                <img src="{{ asset('assets/img/vault-symbol.png') }}" alt="THE VAULT Logo" class="sidebar-brand-logo-img">
             </span>
 
             <span class="sidebar-brand-text">
